@@ -1,8 +1,6 @@
-// fetch.go
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,25 +8,26 @@ import (
 )
 
 func getHTML(rawURL string) (string, error) {
-	resp, err := http.Get(rawURL)
+	res, err := http.Get(rawURL)
 	if err != nil {
-		return "", fmt.Errorf("failed to fetch URL: %w", err)
+		return "", fmt.Errorf("got network error: %v", err)
 	}
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
-	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("received error status code: %d", resp.StatusCode)
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "text/html") {
-		return "", errors.New("content is not HTML")
+	if res.StatusCode > 399 {
+		return "", fmt.Errorf("got HTTP error: %s", res.Status)
 	}
 
-	bodyBytes, err := io.ReadAll(resp.Body)
+	contentType := res.Header.Get("Content-Type")
+	if !strings.Contains(contentType, "text/html") {
+		return "", fmt.Errorf("got non-HTML response: %s", contentType)
+	}
+
+	htmlBodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %w", err)
+		return "", fmt.Errorf("couldn't read response body: %v", err)
 	}
 
-	return string(bodyBytes), nil
+	htmlBody := string(htmlBodyBytes)
+	return htmlBody, nil
 }
